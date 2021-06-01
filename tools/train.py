@@ -45,7 +45,7 @@ def main(args):
     local_rank = int(args.local_rank)
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-    mkdir(local_rank, cfg.save_dir)
+    mkdir(local_rank, cfg.save_dir)                                 # 用了一个rank过滤的装饰器，当rank<1时，创建文件夹
     logger = Logger(local_rank, cfg.save_dir)
 
     if args.seed is not None:
@@ -67,7 +67,7 @@ def main(args):
                                                  pin_memory=True, collate_fn=collate_function, drop_last=True)
 
     logger.log('Creating model...')
-    task = TrainingTask(cfg, evaluator)
+    task = TrainingTask(cfg, evaluator)                             # 研究型代码以一个继承了LightningModule类的Task类包裹，包括模型的建立，训练、验证和测试（step和end of epoch), 优化器的建立
 
     if 'load_model' in cfg.schedule:
         ckpt = torch.load(cfg.schedule.load_model)
@@ -79,7 +79,7 @@ def main(args):
 
     model_resume_path = os.path.join(cfg.save_dir, 'model_last.ckpt') if 'resume' in cfg.schedule else None
 
-    trainer = pl.Trainer(default_root_dir=cfg.save_dir,
+    trainer = pl.Trainer(default_root_dir=cfg.save_dir,             # 工程代码参数化，如GPUs分布训练，early stoping等，抽象为Trainer类
                          max_epochs=cfg.schedule.total_epochs,
                          gpus=cfg.device.gpu_ids,
                          check_val_every_n_epoch=cfg.schedule.val_intervals,
@@ -87,7 +87,7 @@ def main(args):
                          log_every_n_steps=cfg.log.interval,
                          num_sanity_val_steps=0,
                          resume_from_checkpoint=model_resume_path,
-                         callbacks=[ProgressBar(refresh_rate=0)]  # disable tqdm bar
+                         callbacks=[ProgressBar(refresh_rate=0)]  # disable tqdm bar    # 非必要的代码存入Callbacks中，如early stop，传入这里
                          )
 
     trainer.fit(task, train_dataloader, val_dataloader)

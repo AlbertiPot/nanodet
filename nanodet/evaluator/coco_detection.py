@@ -51,13 +51,13 @@ class CocoDetectionEvaluator:
     def evaluate(self, results, save_dir, rank=-1):
         results_json = self.results2json(results)
         json_path = os.path.join(save_dir, 'results{}.json'.format(rank))
-        json.dump(results_json, open(json_path, 'w'))
-        coco_dets = self.coco_api.loadRes(json_path)
-        coco_eval = COCOeval(copy.deepcopy(self.coco_api), copy.deepcopy(coco_dets), "bbox")
-        coco_eval.evaluate()
-        coco_eval.accumulate()
-        coco_eval.summarize()
-        aps = coco_eval.stats[:6]
+        json.dump(results_json, open(json_path, 'w'))                                               # reults_json存入json_path打开的文件
+        coco_dets = self.coco_api.loadRes(json_path)                                                # 读取刚保存的json结果
+        coco_eval = COCOeval(copy.deepcopy(self.coco_api), copy.deepcopy(coco_dets), "bbox")        # 调用COCOeval实例化评估对象：传入dataset的coco_api作为ground_truth, 刚保存的json结果作为dets
+        coco_eval.evaluate()                                                                        # 每张图eval
+        coco_eval.accumulate()                                                                      # 积累图的结果
+        coco_eval.summarize()                                                                       # 计算metrcis
+        aps = coco_eval.stats[:6]                                                                   # 6个AP值
         eval_results = {}
         for k, v in zip(self.metric_names, aps):
             eval_results[k] = v

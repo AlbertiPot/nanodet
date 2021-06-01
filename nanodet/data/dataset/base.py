@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from ..transform import Pipeline
 
 
+# target：是一个dataset的抽象基类，定义了一个长度__len__和__getitem__两个必须的成员函数，以及三个子类中必须重写的抽象函数
 class BaseDataset(Dataset, metaclass=ABCMeta):
     """
     A base class of detection dataset. Referring from MMDetection.
@@ -55,10 +56,10 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         return len(self.data_info)
 
     def __getitem__(self, idx):
-        if self.mode == 'val' or self.mode == 'test':
+        if self.mode == 'val' or self.mode == 'test':                           # 若是val mode，调用抽象函数（子类中重写）get_val_data(idx)根据索引返回data
             return self.get_val_data(idx)
         else:
-            while True:
+            while True:                                                         # 若是train mode，调用抽象函数（子类中重写）get_train_data(idx)根据索引返回data
                 data = self.get_train_data(idx)
                 if data is None:
                     idx = self.get_another_id()
@@ -66,7 +67,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
                 return data
 
     @abstractmethod
-    def get_data_info(self, ann_path):
+    def get_data_info(self, ann_path):                                          # annot文件读取返回一个字典
         pass
 
     @abstractmethod

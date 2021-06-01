@@ -45,7 +45,7 @@ class TrainingTask(LightningModule):
         # TODO: batch eval
         # TODO: support old checkpoint
 
-    def forward(self, x):
+    def forward(self, x):                                                                                       # 调用model的forward前向一次，给下面的predict用的
         x = self.model(x)
         return x
 
@@ -67,10 +67,10 @@ class TrainingTask(LightningModule):
             lr = self.optimizers().param_groups[0]['lr']
             log_msg = 'Train|Epoch{}/{}|Iter{}({})| lr:{:.2e}| '.format(self.current_epoch+1,
                 self.cfg.schedule.total_epochs, self.global_step, batch_idx, lr)
-            self.scalar_summary('Train_loss/lr', 'Train', lr, self.global_step)
+            self.scalar_summary('Train_loss/lr', 'Train', lr, self.global_step)                                 # tensorboard: tag:'Train_loss/lr', phase: 'Train', 横坐标: lr, 纵坐标: iter
             for l in loss_states:
                 log_msg += '{}:{:.4f}| '.format(l, loss_states[l].mean().item())
-                self.scalar_summary('Train_loss/' + l, 'Train', loss_states[l].mean().item(), self.global_step)
+                self.scalar_summary('Train_loss/' + l, 'Train', loss_states[l].mean().item(), self.global_step) # tensorboard存储三个loss
             self.info(log_msg)
 
         return loss
@@ -79,7 +79,7 @@ class TrainingTask(LightningModule):
         self.trainer.save_checkpoint(os.path.join(self.cfg.save_dir, 'model_last.ckpt'))
         self.lr_scheduler.step()
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx):                                                                # 父类LightningModule声明：重写的validate_step的梯度会被自动取消
         preds, loss, loss_states = self.model.forward_train(batch)
 
         if self.log_style == 'Lightning':
@@ -198,7 +198,7 @@ class TrainingTask(LightningModule):
             using_lbfgs: True if the matching optimizer is lbfgs
         """
         # warm up lr
-        if self.trainer.global_step <= self.cfg.schedule.warmup.steps:
+        if self.trainer.global_step <= self.cfg.schedule.warmup.steps:                                                      # 小于warmup steps
             if self.cfg.schedule.warmup.name == 'constant':
                 warmup_lr = self.cfg.schedule.optimizer.lr * self.cfg.schedule.warmup.ratio
             elif self.cfg.schedule.warmup.name == 'linear':
