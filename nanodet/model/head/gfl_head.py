@@ -38,7 +38,7 @@ class Integral(nn.Module):
         super(Integral, self).__init__()
         self.reg_max = reg_max
         self.register_buffer('project',
-                             torch.linspace(0, self.reg_max, self.reg_max + 1))
+                             torch.linspace(0, self.reg_max, self.reg_max + 1))                 # 分割为0-16共17个数
 
     def forward(self, x):
         """Forward feature from the regression head to get integral result of
@@ -50,8 +50,8 @@ class Integral(nn.Module):
             x (Tensor): Integral result of box locations, i.e., distance
                 offsets from the box center in four directions, shape (N, 4).
         """
-        x = F.softmax(x.reshape(-1, self.reg_max + 1), dim=1)
-        x = F.linear(x, self.project.type_as(x)).reshape(-1, 4)
+        x = F.softmax(x.reshape(-1, self.reg_max + 1), dim=1)                                   # (N, 4*(n+1)) → (4N , (n+1))
+        x = F.linear(x, self.project.type_as(x)).reshape(-1, 4)                                 # linear的权重是init中的0-16共17分数 (4N , (n+1)) × ((n+1) , 1) → (4N, 1) reshape后成为(N,4)
         return x
 
 
@@ -70,7 +70,7 @@ class GFLHead(nn.Module):
     :param num_classes: Number of categories excluding the background category.
     :param loss: Config of all loss functions.
     :param input_channel: Number of channels in the input feature map.
-    :param feat_channels: Number of conv layers in cls and reg tower. Default: 4.
+    :param feat_channels: Number of conv channels in cls and reg tower. Default: 256.
     :param stacked_convs: Number of conv layers in cls and reg tower. Default: 4.
     :param octave_base_scale: Scale factor of grid cells.
     :param strides: Down sample strides of all level feature map
@@ -125,8 +125,8 @@ class GFLHead(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.cls_convs = nn.ModuleList()
         self.reg_convs = nn.ModuleList()
-        for i in range(self.stacked_convs):
-            chn = self.in_channels if i == 0 else self.feat_channels
+        for i in range(self.stacked_convs):                                 # 堆叠若干个卷积block
+            chn = self.in_channels if i == 0 else self.feat_channels        # 第一个卷积block输入通道数，其余通道数相同
             self.cls_convs.append(
                 ConvModule(
                     chn,
@@ -151,7 +151,10 @@ class GFLHead(nn.Module):
             3,
             padding=1)
         self.gfl_reg = nn.Conv2d(
-            self.feat_channels, 4 * (self.reg_max + 1), 3, padding=1)
+            self.feat_channels, 
+            4 * (self.reg_max + 1), 
+            3, 
+            padding=1)
         self.scales = nn.ModuleList([Scale(1.0) for _ in self.strides])
 
     def init_weights(self):
@@ -185,7 +188,7 @@ class GFLHead(nn.Module):
         gt_labels = gt_meta['gt_labels']
         gt_bboxes_ignore = None
 
-        featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
+        featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]                     # 倒数后两个为feature map的size的H和W
 
         cls_reg_targets = self.target_assign(batch_size, featmap_sizes, gt_bboxes,
                                              gt_bboxes_ignore, gt_labels, device=device)
@@ -200,7 +203,7 @@ class GFLHead(nn.Module):
         num_total_samples = max(num_total_samples, 1.0)
 
         losses_qfl, losses_bbox, losses_dfl, \
-        avg_factor = multi_apply(
+        avg_factor = multi_apply(                                                           # 将单个loss应用于全部的loss 
             self.loss_single,
             grid_cells_list,
             cls_scores,
@@ -218,14 +221,14 @@ class GFLHead(nn.Module):
             loss_bbox = torch.tensor(0, dtype=torch.float32, requires_grad=True).to(device)
             loss_dfl = torch.tensor(0, dtype=torch.float32, requires_grad=True).to(device)
         else:
-            losses_bbox = list(map(lambda x: x / avg_factor, losses_bbox))
+            losses_bbox = list(map(lambda x: x / avg_factor, losses_bbox))                  # map函数将losses_bbox中的各个losses输入lambda匿名函数计算后，list存储
             losses_dfl = list(map(lambda x: x / avg_factor, losses_dfl))
 
             loss_qfl = sum(losses_qfl)
             loss_bbox = sum(losses_bbox)
             loss_dfl = sum(losses_dfl)
 
-        loss = loss_qfl + loss_bbox + loss_dfl
+        loss = loss_qfl + loss_bbox + loss_dfl                                              # 3个loss加起来作为总loss
         loss_states = dict(
             loss_qfl=loss_qfl,
             loss_bbox=loss_bbox,
@@ -233,6 +236,7 @@ class GFLHead(nn.Module):
 
         return loss, loss_states
 
+    # target: 计算单个loss
     def loss_single(self, grid_cells, cls_score, bbox_pred, labels,
                     label_weights, bbox_targets, stride, num_total_samples):
 
@@ -247,7 +251,7 @@ class GFLHead(nn.Module):
         # FG cat_id: [0, num_classes -1], BG cat_id: num_classes
         bg_class_ind = self.num_classes
         pos_inds = torch.nonzero((labels >= 0)
-                                 & (labels < bg_class_ind), as_tuple=False).squeeze(1)
+                                 & (labels < bg_class_ind), as_tuple=False).squeeze(1)      # 找到标签大于0且标签小于类数目的索引
 
         score = label_weights.new_zeros(labels.shape)
 

@@ -18,9 +18,9 @@ from functools import partial
 
 
 def multi_apply(func, *args, **kwargs):
-    pfunc = partial(func, **kwargs) if kwargs else func
-    map_results = map(pfunc, *args)
-    return tuple(map(list, zip(*map_results)))
+    pfunc = partial(func, **kwargs) if kwargs else func                         # 偏函数用于冻结关键字参数(kwargs)，若后者存在的话
+    map_results = map(pfunc, *args)                                             # 将冻结的关键字参数冻结后形成的新函数，过一遍所有的参数
+    return tuple(map(list, zip(*map_results)))                                  # 将每个结果用list装起来后，用tuple装起来全部的list
 
 
 def images_to_levels(target, num_level_anchors):

@@ -46,7 +46,7 @@ def main(args):
     local_rank = int(args.local_rank)
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-    mkdir(local_rank, cfg.save_dir)
+    mkdir(local_rank, cfg.save_dir)                             # mkdir用@rank_filter包裹，主进程创建save_dir
     logger = Logger(local_rank, cfg.save_dir)
     if args.seed is not None:
         logger.log('Set random seed to {}'.format(args.seed))

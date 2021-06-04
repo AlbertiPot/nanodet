@@ -54,7 +54,7 @@ class MovingAverage(object):
 
     def push(self, val):
         self.queue.append(val)
-        if len(self.queue) > self.window_size:
+        if len(self.queue) > self.window_size:                  # 队列长度大于窗长度，将最早的val踢出
             self.queue.pop(0)
 
     def avg(self):

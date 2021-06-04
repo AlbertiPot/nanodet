@@ -3,6 +3,7 @@ from .trainer import Trainer
 from ..util import DDP
 
 
+# targe: 求梯度平均
 def average_gradients(model):
     """ Gradient averaging. """
     size = float(dist.get_world_size())

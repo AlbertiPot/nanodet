@@ -28,7 +28,7 @@ class Trainer:
         num_gpu = len(gpu_ids)
         batch_sizes = [batch_per_gpu for i in range(num_gpu)]
         self.logger.log('Training batch size: {}'.format(batch_per_gpu*num_gpu))
-        self.model = DataParallel(self.model, gpu_ids, chunk_sizes=batch_sizes).to(device)
+        self.model = DataParallel(self.model, gpu_ids, chunk_sizes=batch_sizes).to(device)          # 数据并行(弃用)，由于在init中当gpu设备数大于1时，会走分布式数据并行，此处弃用
 
     def _init_optimizer(self):
         optimizer_cfg = copy.deepcopy(self.cfg.schedule.optimizer)
@@ -69,9 +69,9 @@ class Trainer:
         model = self.model
         if mode == 'train':
             model.train()
-            if self.rank > -1:  # Using distributed training, need to set epoch for sampler
+            if self.rank > -1:                                                                      # Using distributed training, need to set epoch for sampler
                 self.logger.log("distributed sampler set epoch at {}".format(epoch))
-                data_loader.sampler.set_epoch(epoch)
+                data_loader.sampler.set_epoch(epoch)                                                # 每个epoch开始时重新设置采样器
         else:
             model.eval()
             torch.cuda.empty_cache()
@@ -83,11 +83,12 @@ class Trainer:
             if iter_id >= num_iters:
                 break
             meta['img'] = meta['img'].to(device=torch.device('cuda'), non_blocking=True)
-            output, loss, loss_stats = self.run_step(model, meta, mode)
+            output, loss, loss_stats = self.run_step(model, meta, mode)                             # 调用上一步的step run进行一步train
             if mode == 'val' or mode == 'test':
                 dets = model.module.head.post_process(output, meta)
                 results[meta['img_info']['id'].cpu().numpy()[0]] = dets
-            for k in loss_stats:
+            
+            for k in loss_stats:                                                                    # 统计平均loss:epoch_losses和滑动窗内的loss:step_losses
                 if k not in epoch_losses:
                     epoch_losses[k] = AverageMeter(loss_stats[k].mean().item())
                     step_losses[k] = MovingAverage(loss_stats[k].mean().item(), window_size=self.cfg.log.interval)
@@ -100,13 +101,13 @@ class Trainer:
                     self._iter, iter_id, num_iters, self.optimizer.param_groups[0]['lr'])
                 for l in step_losses:
                     log_msg += '{}:{:.4f}| '.format(l, step_losses[l].avg())
-                    if mode == 'train' and self.rank < 1:
+                    if mode == 'train' and self.rank < 1:                                           # tensorboard遍历要记录的losses
                         self.logger.scalar_summary('Train_loss/' + l, mode, step_losses[l].avg(), self._iter)
-                self.logger.log(log_msg)
+                self.logger.log(log_msg)                                                            # txt要保存的log
             if mode == 'train':
                 self._iter += 1
-            del output, loss, loss_stats
-        epoch_loss_dict = {k: v.avg for k, v in epoch_losses.items()}
+            del output, loss, loss_stats                                                            # 每个iter后删除了引用使loss被清理
+        epoch_loss_dict = {k: v.avg for k, v in epoch_losses.items()}                               # 一个epoch的平均loss
         return results, epoch_loss_dict
 
     def run(self, train_loader, val_loader, evaluator):
@@ -133,11 +134,11 @@ class Trainer:
                 param_group['lr'] = lr
 
         for epoch in range(start_epoch, self.cfg.schedule.total_epochs + 1):
-            results, train_loss_dict = self.run_epoch(epoch, train_loader, mode='train')
+            results, train_loss_dict = self.run_epoch(epoch, train_loader, mode='train')            # 调用上面的epoch_run跑一个epoch
             self.lr_scheduler.step()
             save_model(self.rank, self.model, os.path.join(self.cfg.save_dir, 'model_last.pth'), epoch, self._iter, self.optimizer)
             for k, v in train_loss_dict.items():
-                self.logger.scalar_summary('Epoch_loss/' + k, 'train', v, epoch)
+                self.logger.scalar_summary('Epoch_loss/' + k, 'train', v, epoch)                    # 整个epoch的losses tensorboard显示
 
             # --------evaluate----------
             if self.cfg.schedule.val_intervals > 0 and epoch % self.cfg.schedule.val_intervals == 0:
@@ -145,12 +146,12 @@ class Trainer:
                     results, val_loss_dict = self.run_epoch(self.epoch, val_loader, mode='val')
                 for k, v in val_loss_dict.items():
                     self.logger.scalar_summary('Epoch_loss/' + k, 'val', v, epoch)
-                eval_results = evaluator.evaluate(results, self.cfg.save_dir, rank=self.rank)
+                eval_results = evaluator.evaluate(results, self.cfg.save_dir, rank=self.rank)       # 计算6个coco metric
                 for k, v in eval_results.items():
                     self.logger.scalar_summary('Val_metrics/' + k, 'val', v, epoch)
                 if self.cfg.evaluator.save_key in eval_results:
                     metric = eval_results[self.cfg.evaluator.save_key]
-                    if metric > save_flag:
+                    if metric > save_flag:                                                          # 每个epoch都会更新save_flag,记录当前最好的mAP
                         # ------save best model--------
                         save_flag = metric
                         best_save_path = os.path.join(self.cfg.save_dir, 'model_best')
@@ -167,7 +168,7 @@ class Trainer:
                     warnings.warn('Warning! Save_key is not in eval results! Only save model last!')
             self.epoch += 1
 
-    def get_warmup_lr(self, cur_iters):
+    def get_warmup_lr(self, cur_iters):                                                             # 根据constant或是linear或exp，以及当前的iter数，计算下一步的lr
         if self.cfg.schedule.warmup.name == 'constant':
             warmup_lr = self.cfg.schedule.optimizer.lr * self.cfg.schedule.warmup.ratio
         elif self.cfg.schedule.warmup.name == 'linear':
@@ -180,7 +181,7 @@ class Trainer:
             raise Exception('Unsupported warm up type!')
         return warmup_lr
 
-    def warm_up(self, data_loader):
+    def warm_up(self, data_loader):                                                                 # 独立地warmup更新梯度若干个iters
         model = self.model
         model.train()
         step_losses = {}

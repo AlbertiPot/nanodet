@@ -13,7 +13,6 @@ mytrain_coco_bs192_lr14_280eps_gpu1/nanodet-m.yml \
 
 # tensorboard --logdir=/home/gbc/workspace/nanodet/mytrain_coco_bs192_lr14_280eps_gpu1 --port=10001 --bind_all &
 
-
 # tools/deprecated/train.py with distributed training
 # nohup \
 # /home/gbc/.conda/envs/nanodet/bin/python \

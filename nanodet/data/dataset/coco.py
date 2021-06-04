@@ -128,7 +128,7 @@ class CocoDataset(BaseDataset):
             meta['gt_keypoints'] = ann['keypoints']
 
         meta = self.pipeline(meta, self.input_size)
-        meta['img'] = torch.from_numpy(meta['img'].transpose(2, 0, 1))
+        meta['img'] = torch.from_numpy(meta['img'].transpose(2, 0, 1))          # 交换RGB
         return meta
 
     def get_val_data(self, idx):
