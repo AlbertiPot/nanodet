@@ -85,8 +85,8 @@ class Trainer:
             meta['img'] = meta['img'].to(device=torch.device('cuda'), non_blocking=True)
             output, loss, loss_stats = self.run_step(model, meta, mode)                             # 调用上一步的step run进行一步train
             if mode == 'val' or mode == 'test':
-                dets = model.module.head.post_process(output, meta)
-                results[meta['img_info']['id'].cpu().numpy()[0]] = dets
+                batch_dets = model.module.head.post_process(output, meta)                           
+                results.update(batch_dets)
             
             for k in loss_stats:                                                                    # 统计平均loss:epoch_losses和滑动窗内的loss:step_losses
                 if k not in epoch_losses:

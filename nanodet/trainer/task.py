@@ -42,8 +42,6 @@ class TrainingTask(LightningModule):
         self.save_flag = -10
         self.log_style = 'NanoDet'  # Log style. Choose between 'NanoDet' or 'Lightning'
         # TODO: use callback to log
-        # TODO: batch eval
-        # TODO: support old checkpoint
 
     def forward(self, x):                                                                                       # 调用model的forward前向一次，给下面的predict用的
         x = self.model(x)
@@ -54,6 +52,9 @@ class TrainingTask(LightningModule):
         preds = self.forward(batch['img'])
         results = self.model.head.post_process(preds, batch)
         return results
+
+    def on_train_start(self) -> None:
+        self.lr_scheduler.last_epoch = self.current_epoch-1
 
     def training_step(self, batch, batch_idx):
         preds, loss, loss_states = self.model.forward_train(batch)
@@ -95,8 +96,7 @@ class TrainingTask(LightningModule):
             self.info(log_msg)
 
         dets = self.model.head.post_process(preds, batch)
-        res = {batch['img_info']['id'].cpu().numpy()[0]: dets}
-        return res
+        return dets
 
     def validation_epoch_end(self, validation_step_outputs):
         """
@@ -134,8 +134,7 @@ class TrainingTask(LightningModule):
 
     def test_step(self, batch, batch_idx):
         dets = self.predict(batch, batch_idx)
-        res = {batch['img_info']['id'].cpu().numpy()[0]: dets}
-        return res
+        return dets
 
     def test_epoch_end(self, test_step_outputs):
         results = {}
