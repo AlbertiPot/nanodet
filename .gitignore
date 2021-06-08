@@ -121,3 +121,6 @@ work_dirs/
 # log
 mytrain/*
 nohup.out
+data
+wider_ped/test/*
+wider_ped/*.json

@@ -121,14 +121,14 @@ def warp_and_resize(meta, warp_kwargs, dst_shape, keep_ratio=True):
     width = raw_img.shape[1]
 
     # center
-    C = np.eye(3)
+    C = np.eye(3)                                                           # 生成对角阵
     C[0, 2] = - width / 2
     C[1, 2] = - height / 2
 
     # do not change the order of mat mul
     if 'perspective' in warp_kwargs and random.randint(0, 1):
         P = get_perspective_matrix(warp_kwargs['perspective'])
-        C = P @ C
+        C = P @ C                                                           # numpy的矩阵乘
     if 'scale' in warp_kwargs and random.randint(0, 1):
         Scl = get_scale_matrix(warp_kwargs['scale'])
         C = Scl @ C
