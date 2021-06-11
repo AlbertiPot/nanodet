@@ -1,5 +1,5 @@
 #Config File example
-save_dir: /home/gbc/workspace/nanodet/wider_ped/test7_lr0032_eps280_bs32_brightness02                        #####
+save_dir: /home/gbc/workspace/nanodet/wider_ped/test15_lr011_eps400_bs32_brightness02                        #####
 model:
   arch:
     name: OneStageDetector
@@ -75,14 +75,14 @@ schedule:
 #  load_model: YOUR_MODEL_PATH
   optimizer:
     name: SGD
-    lr: 0.032                                                                #%%%%%
+    lr: 0.11                                                                #%%%%%
     momentum: 0.9
     weight_decay: 0.0001
   warmup:
     name: linear
     steps: 300
     ratio: 0.1
-  total_epochs: 280                                                         #%%%%
+  total_epochs: 400                                                         #%%%%
   lr_schedule:
     name: MultiStepLR
     milestones: [240,260,275]                                               #%%%%
